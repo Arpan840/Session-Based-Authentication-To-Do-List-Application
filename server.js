@@ -30,6 +30,10 @@ const {
   matchPassword,
   todoValidation,
   updateTodoValidation,
+  emailAuthintication,
+  jwtToken,
+  emailVerification,
+  verifyToken,
 } = require("./utility files/utility");
 const { default: mongoose } = require("mongoose");
 const todoSchema = require("./Models/todoSchema");
@@ -60,6 +64,8 @@ app.post("/signUp", rateLimiting, async (req, res) => {
     let hashedpass = await hashedPassword({ password });
     let newUser = new userModel({ name, email, password: hashedpass, age });
     await newUser.save();
+    const verifiedToken = jwtToken(email);
+    await emailVerification(email, verifiedToken);
     res.send({
       status: 201,
       message: "SignUp successfully",
@@ -72,10 +78,31 @@ app.post("/signUp", rateLimiting, async (req, res) => {
   }
 });
 
+app.get("/verifyEmail/:token", async (req, res) => {
+  const token = req.params.token;
+  try {
+    let verifiedToken = await verifyToken(token);
+    if (verifiedToken) {
+      let updateData = await userModel.findOneAndUpdate(
+        { email: verifiedToken },
+        { isEmailAuth: true }
+      );
+      res.send({
+        status: 200,
+        message: "Verification successful",
+      });
+    }
+  } catch (error) {
+    res.status(403).json({ message: error });
+  }
+});
+
 app.post("/login", rateLimiting, async (req, res) => {
   const { userId, password } = req.body;
   try {
     let data = await loginValidation(userId);
+
+    await emailAuthintication(data);
     await matchPassword(password, data.password);
 
     req.session.isAuth = true;
@@ -92,7 +119,7 @@ app.post("/login", rateLimiting, async (req, res) => {
   } catch (error) {
     res.send({
       status: 400,
-      message: error,
+      message: error.message,
     });
   }
 });

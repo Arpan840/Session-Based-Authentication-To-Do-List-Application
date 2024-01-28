@@ -2,7 +2,9 @@ const validator = require("validator");
 const bcrypt = require("bcrypt");
 const env = require("dotenv");
 const userModel = require("../Models/userSchema");
+const jwt = require("jsonwebtoken");
 const { response } = require("express");
+const nodemailer = require("nodemailer")
 env.config();
 
 const validateUser = ({ name, email, password, age }) => {
@@ -35,7 +37,7 @@ function loginValidation(userId) {
   return new Promise(async (response, reject) => {
     if (validator.isEmail(userId)) {
       let user = await userModel.findOne({ email: userId });
-      console.log(user);
+      console.log(user, "Test");
       if (user) {
         response(user);
       } else {
@@ -63,38 +65,86 @@ function matchPassword(password, hashedPassword) {
   });
 }
 
-function todoValidation(todo){
- return new Promise((resolve,reject)=>{ 
-    if(todo)
-    {
-      resolve()
+function todoValidation(todo) {
+  return new Promise((resolve, reject) => {
+    if (todo) {
+      resolve();
+    } else {
+      return reject("Please enter a todo");
     }
-    else{
-     return reject("Please enter a todo")
+  });
+}
+
+function updateTodoValidation(id, updateTodo) {
+  return new Promise((resolve, reject) => {
+    console.log(id, updateTodo, "testtttts");
+    if (!id) {
+      reject("Please provide valid Id");
+    } else if (!updateTodo) {
+      reject("No changes to be made");
+    } else {
+      resolve();
     }
+  });
+}
+
+function emailAuthintication(userDb) {
+  return new Promise((resolve, reject) => {
+    if (userDb && !userDb.isEmailAuth) {
+      reject("This account is not authenticated by Email");
+    }
+    resolve();
+  });
+}
+
+function jwtToken(Email) {
+  const token = jwt.sign(Email, process.env.Secret_Key);
+  return token;
+}
+
+function emailVerification(email,verifiedToken){
+  return new Promise((resolve,reject)=>{
+    var transporter = nodemailer.createTransport({
+      service: 'gmail',
+      secure: true,
+      auth: {
+        user: 'arpandas020498@gmail.com',
+        pass: 'nkma tggo tiba snxy'
+      }
+    });
+    var mailOptions = {
+      from: 'arpandas020498@gmail.com',
+      to: email,
+      subject: 'Email verification for todo app',
+      html: `<a href="http://localhost:8000/verifyEmail/${verifiedToken}">click to verify </a>`
+    };
+    transporter.sendMail(mailOptions, function(error, info){
+      if (error) {
+        reject(error);
+      } else {
+        console.log('Email sent: ' + info.response);
+        resolve()
+      }
+    });
   })
 }
 
-function updateTodoValidation(id,updateTodo){
+const verifyToken=(token)=>{
   return new Promise((resolve,reject)=>{
-    console.log(id,updateTodo,"testtttts")
-      if(!id)
-      {
-        reject("Please provide valid Id")
-      }
-      else if(!updateTodo){
-        reject("No changes to be made")
-      }
-      else{
-        resolve()
-      }
-  })
-}
+   jwt.verify(token,process.env.Secret_Key,async(error,decoded)=>{
+    error?reject(error):resolve(decoded);
+   })  
+})}
+
 module.exports = {
   validateUser,
   hashedPassword,
   loginValidation,
   matchPassword,
   todoValidation,
-  updateTodoValidation
+  updateTodoValidation,
+  emailAuthintication,
+  jwtToken,
+  emailVerification,
+  verifyToken
 };

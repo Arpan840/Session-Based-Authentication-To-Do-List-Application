@@ -21,5 +21,10 @@ const user = new Schema({
     default: 0,
     min: [18, "Age must be above or equal to 18"],
   },
+  isEmailAuth:{
+    type: Boolean,
+    default: false,
+    required: true
+  }
 });
 module.exports = mongoose.model("user", user);
